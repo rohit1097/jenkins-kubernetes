@@ -1,0 +1,55 @@
+pipeline{
+    agent any
+    stages {
+        stage('git clone') {
+            steps{
+                git branch: 'main',
+                url: 'https://github.com/Sidharth034/jenkins-kubernetes-example.git'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                  sh 'docker build -t sidharth034/nodejsapp-1.0:latest .'
+                }
+            }
+        }
+        stage('Deploy Docker Image') {
+            steps {
+               // sh 'sudo docker login -u sidharth034 -p $dockerhub-pass'                		
+	//echo 'Login Completed'      
+                script {
+                    withCredentials([string(credentialsId: 'dockerhubp', variable: 'dockerhubp')]) {
+                    sh 'docker login -u sidharth034 -p ${dockerhubp}'
+}
+}
+}
+
+                 //withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
+                   // sh 'docker login -u devopshint -p ${dockerhubpwd}'
+                 //}  
+               //  sh 'docker push sidharth034/nodejsapp-1.0:latest'
+                //}
+            
+        }
+    
+    stage('Deploy App on k8s') {
+      steps {
+            sshagent(['kube-server-cred']) {
+            sh "scp -o StrictHostKeyChecking=no nodejsapp.yaml ubuntu@3.18.225.2:/home/ubuntu"
+            sh "ssh ubuntu@3.18.225.2 sudo kubectl create -f ."
+            sh 'hostname'
+            //sh 'hostname; ls ; pwd'
+         //   script {
+          //      try{
+            //        sh "ssh ubuntu@3.18.225.2 kubectl create -f ."
+              //  }catch(error){
+                //    sh "ssh ubuntu@3.18.225.2 kubectl create -f ."
+        //    }
+//}
+        }
+      
+    }
+    }
+}
+}

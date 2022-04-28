@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: nodejs-app
-        image: "18.117.86.144:6001/nodejsapp:latest"
+        image: "3.145.214.118:6001/nodejsapp:latest"
         ports:
           - containerPort: 3000
       imagePullSecrets:

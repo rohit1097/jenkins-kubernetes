@@ -3,53 +3,90 @@ pipeline{
     stages {
         stage('git clone') {
             steps{
-                git branch: 'main',
-                url: 'https://github.com/Sidharth034/jenkins-kubernetes-example.git'
+                git branch: 'master',
+                url: 'https://github.com/rohit1097/jenkins-kubernetes.git'
             }
         }
+        
+      
+        stage('git-secrete-check'){
+            steps{
+                sh 'rm trufflehog || true'
+                sh 'docker run gesellix/trufflehog --json https://github.com/rohit1097/jenkins-kubernetes.git >> trufflehog'
+                sh 'cat trufflehog'
+                
+        }  
+      }
+      
+      
         stage('Build Docker Image') {
             steps {
                 script {
-                  sh 'docker build -t sidharth034/nodejsapp-1.0:latest .'
+                  sh 'docker build -t 3.135.84.33:6001/nodejsapp:latest . '
+         
                 }
             }
         }
-        stage('Deploy Docker Image') {
+        stage('Deploy Docker Image on Nexus') {
             steps {
-               // sh 'sudo docker login -u sidharth034 -p $dockerhub-pass'                		
-	//echo 'Login Completed'      
                 script {
-                    withCredentials([string(credentialsId: 'dockerhubp', variable: 'dockerhubp')]) {
-                    sh 'docker login -u sidharth034 -p ${dockerhubp}'
-}
-}
-}
+                    
+                    sh 'docker login  http://3.135.84.33:6001/repository/rohit-repo/ -u nexus -p nexus'
+                    sh 'docker push 3.135.84.33:6001/nodejsapp:latest'
+                }                       
+            }
+        }
 
-                 //withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
-                   // sh 'docker login -u devopshint -p ${dockerhubpwd}'
-                 //}  
-               //  sh 'docker push sidharth034/nodejsapp-1.0:latest'
-                //}
+
+        stage('oswap dependency check'){
+            steps{
+//                echo 'delete old file'
+                sh 'rm -rf /var/lib/jenkins/OWASP-Dependency-Check/reports/*'
+//                echo 'fetch from git'
+                sh 'cd /var/lib/jenkins/workspace/kubernetes-proj/'
+//                echo 'give  executable permissions to .sh file'
+                sh 'chmod +x oswap-dependency-check.sh'
+//                echo 'execute .sh file'
+                sh './oswap-dependency-check.sh'
+                //dependencyCheckPublisher pattern: '/var/lib/jenkins/OWASP-Dependency-Check/reports/dependency-check-report.xml'
+            }
+          
+        }
+
+
+//        stage('SonarQube'){
+//           steps{
+//            withSonarQubeEnv('sonarqube-9.4')  {
+//               sh 'mvn sonar:sonar'
+//                sh 'cat target/sonar/report-task.txt'
+//            }  
+//            }
             
-        }
-    
-    stage('Deploy App on k8s') {
-      steps {
-            sshagent(['kube-server-cred']) {
-            sh "scp -o StrictHostKeyChecking=no nodejsapp.yaml ubuntu@3.18.225.2:/home/ubuntu"
-            sh "ssh ubuntu@3.18.225.2 sudo kubectl create -f ."
-            sh 'hostname'
-            //sh 'hostname; ls ; pwd'
-         //   script {
-          //      try{
-            //        sh "ssh ubuntu@3.18.225.2 kubectl create -f ."
-              //  }catch(error){
-                //    sh "ssh ubuntu@3.18.225.2 kubectl create -f ."
-        //    }
-//}
-        }
+//        }
+        
+
+        stage('Deploy App on k8s') {
+            steps {
+                sshagent(['k8s-M']) {
+                sh "scp -o StrictHostKeyChecking=no nodejsapp.yaml ubuntu@18.117.17.176:/home/ubuntu"
+                sh "ssh ubuntu@18.117.17.176 sudo kubectl apply -f ."
+                sh 'hostname'
+                }
       
-    }
-    }
+            }
+        }
+
+//       stage('SonarQube analysis') {
+//        def scannerHome = tool 'SonarScanner 4.0';
+//            steps{
+//                withSonarQubeEnv('sonarqube-8.9.8') { 
+//                  If you have configured more than one global server connection, you can specify its name
+//              sh "${scannerHome}/bin/sonar-scanner"
+//                sh "mvn sonar:sonar"
+//                }
+//            }
+//        }
+
+
 }
 }
